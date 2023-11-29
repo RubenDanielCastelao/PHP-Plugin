@@ -9,57 +9,77 @@ Version: 3.3
 Author URI: https://ma.tt/
 */
 
-function myplugin_update_db_check() {
+//Create a 5 length array of cool places name
+$places = array(
+    'Buenos Aires',
+    'Córdoba',
+    'La Plata',
+    'Mar del Plata',
+    'Mendoza');
+
+//Create another 5 word length array of cool cars
+$cars = array(
+    'Ford',
+    'Chevrolet',
+    'Fiat',
+    'Renault',
+    'Peugeot');
+
+function renym_wordpress_typo_fix($text){
+
+    $words = selectData();
+    foreach ($words as $result){
+        $cars[] = $result->cars;
+        $places[] = $result->places;
+    }
+    return str_replace($cars, $places, $text);
+}
+
+
+add_filter('the_content', 'renym_wordpress_typo_fix');
+
+function createTable(){
     global $wpdb;
+    $table_name = $wpdb->prefix . 'damRuben';
 
     $charset_collate = $wpdb->get_charset_collate();
 
-    $table_name = $wpdb->prefix . 'damRuben';
-
     $sql = "CREATE TABLE IF NOT EXISTS $table_name (
         id mediumint(9) NOT NULL AUTO_INCREMENT,
-        time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-        name tinytext NOT NULL,
-        text text NOT NULL,
-        url varchar(55) DEFAULT '' NOT NULL,
+        cars varchar(255) NOT NULL,
+        places varchar(255) NOT NULL,
         PRIMARY KEY (id)
-    )$charset_collate;";
-
+    ) $charset_collate;";
     require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
     dbDelta( $sql );
-
-    $name='Rubén';
-    $text='Prueba de inserción con DB';
-
-    $result = $wpdb->insert(
-        $table_name,
-        array(
-            'time' => current_time( 'mysql' ),
-            'name' => $name,
-            'text' => $text,
-        )
-    );
-
-    error_log("Comprobar inserción: " . $result);
 }
 
-add_action( 'plugins_loaded', 'myplugin_update_db_check' );
+add_action( 'plugins_loaded', 'createTable' );
 
 
-function renym_wordpress_typo_fix( $text ) {
-    global $wpdb;
-
+function insertData(){
+    global $wpdb, $cars, $places;
     $table_name = $wpdb->prefix . 'damRuben';
-
-    $resultado = $wpdb->get_results("SELECT * FROM " . $table_name, ARRAY_A);
-
-    foreach($resultado as $fila)
-    {
-        error_log("Recorremos resultado: " . $fila['time']);
+    $hasSomething = $wpdb->get_results( "SELECT * FROM $table_name" );
+    if ( count($hasSomething) == 0 ) {
+        for ($i = 0; $i < count($cars); $i++) {
+            $wpdb->insert(
+                $table_name,
+                array(
+                    'cars' => $cars[$i],
+                    'places' => $places[$i]
+                )
+            );
+        }
     }
-
-    return str_replace( 'WordPressPlugin', $resultado , $text );
 }
 
-add_filter( 'the_content', 'renym_wordpress_typo_fix' );
+add_action( 'plugins_loaded', 'insertData' );
+
+function selectData(){
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'damRuben';
+    $results = $wpdb->get_results( "SELECT * FROM $table_name" );
+    return $results;
+}
 
